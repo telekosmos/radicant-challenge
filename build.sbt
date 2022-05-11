@@ -5,6 +5,7 @@ val LogbackVersion = "1.2.10"
 val circeVersion = "0.14.1"
 val Http4sVersion = "0.23.7"
 val pureconfigVersion = "0.17.1"
+val DoobieVersion = "1.0.0-RC1"
 
 lazy val root = (project in file(".")).settings(
   name := "radicant-challenge",
@@ -25,6 +26,11 @@ lazy val root = (project in file(".")).settings(
     "io.circe"      %% "circe-generic"   % circeVersion,
     // Optional for string interpolation to JSON model
     "io.circe" %% "circe-literal" % circeVersion,
+
+    "org.tpolecat"  %% "doobie-core"      % DoobieVersion,
+    "org.tpolecat"  %% "doobie-postgres"  % DoobieVersion,
+    "org.tpolecat"  %% "doobie-hikari"    % DoobieVersion,
+    "org.tpolecat"  %% "doobie-scalatest" % DoobieVersion,
 
     "org.scalamock" %% "scalamock" % "5.2.0" % Test,
     "org.scalatest" %% "scalatest" % "3.2.9" % Test,
