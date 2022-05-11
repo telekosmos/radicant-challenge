@@ -2,10 +2,12 @@ package dev.telekosmos
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import dev.telekosmos.Endpoints
 import org.http4s.{HttpApp, InvalidMessageBodyFailure, Method, QueryParamEncoder, Request, Status, Uri}
 import cats.effect._
 import cats.effect.unsafe.implicits.global
+import dev.telekosmos.radicant.domain.funds.FundService
+import dev.telekosmos.radicant.infrastructure.api.Endpoints
+import dev.telekosmos.radicant.infrastructure.repository.memory.FundRepositoryTestInterpreter
 import io.circe.Json
 import io.circe.syntax.KeyOps
 import org.http4s.circe.jsonDecoder
@@ -14,9 +16,11 @@ import org.http4s.implicits.http4sLiteralsSyntax
 
 class ServerSpec extends AnyWordSpec with Matchers {
 
+  val fundService: FundService[IO] = FundService(FundRepositoryTestInterpreter[IO]())
+
   "Http server" should {
     "return status" in {
-      val httpApp: HttpApp[IO] = Endpoints.routes[IO]().orNotFound
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uri"/status")
       val expectedPayload = Json.obj("status" := "Normal")
 
@@ -25,14 +29,14 @@ class ServerSpec extends AnyWordSpec with Matchers {
       response.unsafeRunSync() should equal(expectedPayload)
     }
 
-    "return bigger size" in {
+    "return single result" in {
       val fundSize = 30
-      val op = "gt"
+      val sector = "financial"
       val uri = uri"/funds"
-      val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("op", op)
-      val httpApp: HttpApp[IO] = Endpoints.routes[IO]().orNotFound
+      val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("sector", sector)
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
-      val expectedJson = Json.obj("size" := fundSize, "op" := op)
+      val expectedJson = Json.arr(Json.obj("fundSymbol" := "GNR", "size" := Json.Null, "fundShortName":= "Invesco Greater China Fund Cl Y"))
 
       val client: Client[IO] = Client.fromHttpApp(httpApp)
       val response = client.expect[Json](request)
@@ -42,12 +46,11 @@ class ServerSpec extends AnyWordSpec with Matchers {
 
     "request wrong param type" in {
       val fundSize = "10.5"
-      val op = "gt"
+      val sector = "financial"
       val uri = uri"/funds"
-      val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("op", op)
-      val httpApp: HttpApp[IO] = Endpoints.routes[IO]().orNotFound
+      val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("sector", sector)
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
-      val expectedJson = Json.obj("size" := fundSize, "op" := op)
 
       val resp = httpApp.run(request).unsafeRunSync()
       resp.status == Status.BadRequest should be(true)
@@ -55,5 +58,14 @@ class ServerSpec extends AnyWordSpec with Matchers {
       body should (include("Wrong") and include("size"))
     }
 
+    "request with no params" in {
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
+      val request: Request[IO] = Request(method = Method.GET, uri = uri"/funds")
+
+      val resp = httpApp.run(request).unsafeRunSync()
+      resp.status == Status.BadRequest should be(true)
+      val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+      body should (include("required") and include("size"))
+    }
   }
 }
