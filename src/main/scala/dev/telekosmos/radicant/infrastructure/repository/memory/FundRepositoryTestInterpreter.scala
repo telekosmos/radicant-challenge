@@ -8,9 +8,9 @@ class FundRepositoryTestInterpreter[F[_]: Applicative] extends FundRepostoryAlge
 
   override def findBySizeAndSector(size: Long, sector: String): F[List[Fund]] = {
     (size, sector) match {
-      case (v, s) if v > 0 && s == "financial" => List(Fund("GNR", None, Some("Invesco Greater China Fund Cl Y"))).pure[F]
+      case (v, s) if v > 0 && s == "fund_sector_financial_services" => List(Fund("GNR", None, Some("Invesco Greater China Fund Cl Y"))).pure[F]
       case (v, _) if v > 0 => List(Fund("AAUD", Some(1685480652), Some("Great Fund"))).pure[F]
-      case (_, s) if s == "financial" => List(Fund("HEDJ", Some(1685480652), None), Fund("INV", Some(1685480652), Some("Invention financial"))).pure[F]
+      case (_, s) if s == "fund_sector_financial_services" => List(Fund("HEDJ", Some(1685480652), None), Fund("INV", Some(1685480652), Some("Invention financial"))).pure[F]
       case (_, _) => List[Fund]().pure[F]
     }
   }

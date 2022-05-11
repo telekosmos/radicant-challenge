@@ -4,18 +4,26 @@ import cats.effect.{Async, Resource}
 import doobie.Transactor
 import doobie.hikari.HikariTransactor
 import doobie.util.ExecutionContexts
+import dev.telekosmos.radicant.StoreConfig
 
 object Database {
 
-  def createTransactor[F[_]: Async](): Resource[F, Transactor[F]] =
+  def createTransactor[F[_]: Async](config: StoreConfig): Resource[F, Transactor[F]] =
     for {
       ce <- ExecutionContexts.fixedThreadPool[F](32) // our connect EC
+      driver = config.driver
+      db = config.`type`
+      server = config.server
+      port = config.port
+      user = config.user
+      password = config.password
+      dbName = config.dbname
       xa <- HikariTransactor.newHikariTransactor[F](
-        "org.postgresql.Driver",
-        s"jdbc:postgresql://localhost:5432/radicant",   // connect URL
-        "postgres",                                   // username
-        "p0stgr3s",                                     // password
-        ce                                      // await connection here
+        driver,
+        s"jdbc:$db://$server:$port/$dbName",
+        user,
+        password,
+        ce
       )
     } yield xa
 }
