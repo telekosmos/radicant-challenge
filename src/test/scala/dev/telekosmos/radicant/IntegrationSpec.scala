@@ -52,9 +52,38 @@ class IntegrationSpec extends AnyWordSpec with Matchers {
         val symbols = funds.map(p => p.fundSymbol)
         expectedSymbols.forall(symbols.contains(_)) shouldBe(true)
       }
+    }
 
+    "get empty resultset from database" in {
+      val resources = for {
+        config <- Config.loadResource[IO]()
+        xa <- Database.createTransactor[IO](config.storage)
+      } yield (config, xa)
 
+      val test = resources.use { resources =>
+        val (config, xa) = resources
+        val repo = FundRepositoryPgInterpreter[IO](config.storage.radicant, xa)
+        val service = FundService(repo)
+        val httpApp = Endpoints.routes(config.endpoints, service).orNotFound
 
+        val fundSize = "99999999999".toLong
+        val sector = "communication"
+        val uri = uri"/funds"
+        val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("sector", sector)
+
+        val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
+
+        val client: Client[IO] = Client.fromHttpApp(httpApp)
+        client.expect[Json](request)
+      }
+
+      val result = test.unsafeRunSync()
+      val listResults = result.as[List[Fund]]
+      for {
+        funds <- listResults
+      } yield {
+        funds.size == 0 shouldBe(true)
+      }
     }
   }
   // val fundService: FundService[IO] = FundService(FundRepositoryTestInterpreter[IO]())

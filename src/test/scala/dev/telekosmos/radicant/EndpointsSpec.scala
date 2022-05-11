@@ -54,8 +54,9 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
 
       val resp = httpApp.run(request).unsafeRunSync()
-      resp.status == Status.BadRequest should be(true)
       val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+
+      resp.status == Status.BadRequest should be(true)
       body should (include("Wrong") and include("size"))
     }
 
@@ -68,8 +69,9 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
 
       val resp = httpApp.run(request).unsafeRunSync()
-      resp.status == Status.BadRequest should be(true)
       val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+
+      resp.status == Status.BadRequest should be(true)
       body should (include("Wrong") and include("sector"))
     }
 
@@ -78,8 +80,9 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       val request: Request[IO] = Request(method = Method.GET, uri = uri"/funds")
 
       val resp = httpApp.run(request).unsafeRunSync()
-      resp.status == Status.BadRequest should be(true)
       val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+
+      resp.status == Status.BadRequest should be(true)
       body should (include("required") and include("size"))
     }
   }
