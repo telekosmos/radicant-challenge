@@ -2,8 +2,8 @@ package dev.telekosmos.radicant.domain.funds
 
 class FundService[F[_]](fundRepo: FundRepostoryAlgebra[F]) {
 
-  def findBySizeAndSector(size: Long, sector: String): F[List[Fund]] =
-    fundRepo.findBySizeAndSector(size, sector)
+  def findBySizeAndSector(size: Long, sectorColumnName: String): F[List[Fund]] =
+    fundRepo.findBySizeAndSector(size, sectorColumnName)
 }
 
 object FundService {

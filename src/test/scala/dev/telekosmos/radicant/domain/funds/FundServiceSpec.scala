@@ -28,7 +28,7 @@ class FundServiceSpec extends AnyWordSpec with Matchers {
     }
 
     "return multiple results" in {
-      val call: IO[List[Fund]] = fundService.findBySizeAndSector(0, "financial")
+      val call: IO[List[Fund]] = fundService.findBySizeAndSector(0, "fund_sector_financial_services")
       val result = call.unsafeRunSync()
 
       result.size shouldBe(2)
