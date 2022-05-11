@@ -1,8 +1,5 @@
-package dev.telekosmos
+package dev.telekosmos.radicant
 
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.http4s.{HttpApp, InvalidMessageBodyFailure, Method, QueryParamEncoder, Request, Status, Uri}
 import cats.effect._
 import cats.effect.unsafe.implicits.global
 import dev.telekosmos.radicant.domain.funds.FundService
@@ -13,8 +10,11 @@ import io.circe.syntax.KeyOps
 import org.http4s.circe.jsonDecoder
 import org.http4s.client.Client
 import org.http4s.implicits.http4sLiteralsSyntax
+import org.http4s.{HttpApp, Method, Request, Status}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ServerSpec extends AnyWordSpec with Matchers {
+class EndpointsSpec extends AnyWordSpec with Matchers {
 
   val fundService: FundService[IO] = FundService(FundRepositoryTestInterpreter[IO]())
 
