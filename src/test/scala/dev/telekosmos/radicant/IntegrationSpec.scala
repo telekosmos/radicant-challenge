@@ -4,6 +4,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.http4s.{DecodeFailure, HttpApp, InvalidMessageBodyFailure, Method, QueryParamEncoder, Request, Status, Uri}
 import cats.effect._
+import cats.effect.testing.scalatest.AsyncIOSpec
 import cats.implicits._
 import cats.effect.unsafe.implicits.global
 import dev.telekosmos.radicant.{Config, EndpointsConfig, FundsEndpointConfig, Main, RadicantConfig, StoreConfig}
@@ -15,10 +16,11 @@ import io.circe.generic.auto._
 import org.http4s.circe.jsonDecoder
 import org.http4s.client.Client
 import org.http4s.implicits.http4sLiteralsSyntax
+import org.scalatest.freespec.AsyncFreeSpec
 
-class IntegrationSpec extends AnyWordSpec with Matchers {
+class IntegrationSpec extends AsyncFreeSpec with Matchers with AsyncIOSpec {
 
-  "Server with database" should {
+  "Server with database" - {
     "get the result straight from database" in {
       val resources = for {
         config <- Config.loadResource[IO]()
@@ -42,16 +44,19 @@ class IntegrationSpec extends AnyWordSpec with Matchers {
         client.expect[Json](request)
       }
 
-      val result = test.unsafeRunSync()
-      val listResults = result.as[List[Fund]]
-      val expectedSymbols = List("FNGU", "HYS", "XLC")
-      for {
-        funds <- listResults
-      } yield {
-        funds.size == 3 shouldBe(true)
-        val symbols = funds.map(p => p.fundSymbol)
-        expectedSymbols.forall(symbols.contains(_)) shouldBe(true)
-      }
+      // val result = test.unsafeRunSync()
+      test.asserting(result => {
+        val listResults = result.as[List[Fund]]
+        val expectedSymbols = List("FNGU", "HYS", "XLC")
+        for {
+          funds <- listResults
+        } yield {
+          funds.size == 3 shouldBe(true)
+          val symbols = funds.map(p => p.fundSymbol)
+          expectedSymbols.forall(symbols.contains(_)) shouldBe(true)
+        }
+        succeed
+      })
     }
 
     "get empty resultset from database" in {
@@ -77,13 +82,16 @@ class IntegrationSpec extends AnyWordSpec with Matchers {
         client.expect[Json](request)
       }
 
-      val result = test.unsafeRunSync()
-      val listResults = result.as[List[Fund]]
-      for {
-        funds <- listResults
-      } yield {
-        funds.size == 0 shouldBe(true)
-      }
+      // val result = test.unsafeRunSync()
+      test.asserting(result => {
+        val listResults = result.as[List[Fund]]
+        for {
+          funds <- listResults
+        } yield {
+          funds.size == 0 shouldBe(true)
+        }
+        succeed
+      })
     }
   }
   // val fundService: FundService[IO] = FundService(FundRepositoryTestInterpreter[IO]())
