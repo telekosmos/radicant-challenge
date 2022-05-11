@@ -3,6 +3,7 @@ package dev.telekosmos.radicant.infrastructure.api
 import cats.data.ValidatedNel
 import cats.effect.Async
 import cats.implicits._
+import dev.telekosmos.radicant.EndpointsConfig
 import dev.telekosmos.radicant.domain.funds.{Fund, FundService}
 import io.circe.Json
 import io.circe.syntax._
@@ -14,24 +15,25 @@ import org.http4s.dsl.Http4sDsl
 import org.http4s.server.middleware.{ErrorHandling, Logger}
 import org.http4s.{HttpApp, HttpRoutes, ParseFailure}
 
-class Endpoints[F[_]: Async](fundService: FundService[F]) extends Http4sDsl[F] {
+class Endpoints[F[_]: Async](config: EndpointsConfig, fundService: FundService[F]) extends Http4sDsl[F] {
   object SizeQueryParamMatcher extends OptionalValidatingQueryParamDecoderMatcher[Long]("size")
-  object OpQueryParamMatcher extends OptionalValidatingQueryParamDecoderMatcher[String]("op")
   object SectorQueryParamMatcher extends OptionalQueryParamDecoderMatcher[String]("sector")
+
+  private val validSectors: Set[String] = config.funds.validSectors.keySet
 
   private def validate(sizeParam: ValidatedNel[ParseFailure, Long], sectorParam: String) = {
     sizeParam.fold(
       _ => BadRequest(json"""{ "error": "Wrong parameter value: size" }"""),
       size => {
-        val sectors = Set("materials", "communication", "cyclical", "defensive", "energy", "financial", "healthcare", "industrials", "real_estate", "technology", "utilities")
-        val validSector = sectors.contains(sectorParam)
-        if (!validSector) BadRequest(json"""{ "error": "Wrong value for parameter sector" }""") else {
+        // val sectors = Set("materials", "communication", "cyclical", "defensive", "energy", "financial", "healthcare", "industrials", "real_estate", "technology", "utilities")
+        val validSector = validSectors.contains(sectorParam)
+        if (!validSector) BadRequest(json"""{ "error": "Wrong value for parameter sector" }""")
+        else
           for {
-            retrieved <- fundService.findBySizeAndSector(size, sectorParam)
+            retrieved <- fundService.findBySizeAndSector(size, config.funds.validSectors(sectorParam))
             asJson = retrieved.map(_.asJson)
             resp <- Ok(asJson)
           } yield resp
-        }
       }
     )
   }
@@ -59,10 +61,10 @@ class Endpoints[F[_]: Async](fundService: FundService[F]) extends Http4sDsl[F] {
 }
 
 object Endpoints {
-  def routes[F[_]: Async](fundService: FundService[F]): HttpRoutes[F] =
-    new Endpoints(fundService).routes
+  def routes[F[_]: Async](config: EndpointsConfig, fundService: FundService[F]): HttpRoutes[F] =
+    new Endpoints(config, fundService).routes
 
-  def getHttpApp[F[_]: Async](fundService: FundService[F]): HttpApp[F] =
-    new Endpoints(fundService).errorHandlingApp
+  def getHttpApp[F[_]: Async](config: EndpointsConfig, fundService: FundService[F]): HttpApp[F] =
+    new Endpoints(config, fundService).errorHandlingApp
 }
 

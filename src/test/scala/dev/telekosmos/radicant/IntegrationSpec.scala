@@ -6,10 +6,9 @@ import org.http4s.{DecodeFailure, HttpApp, InvalidMessageBodyFailure, Method, Qu
 import cats.effect._
 import cats.implicits._
 import cats.effect.unsafe.implicits.global
-import dev.telekosmos.radicant.Main
+import dev.telekosmos.radicant.{Config, EndpointsConfig, FundsEndpointConfig, Main, RadicantConfig, StoreConfig}
 import dev.telekosmos.radicant.domain.funds.{Fund, FundService}
 import dev.telekosmos.radicant.infrastructure.api.Endpoints
-import dev.telekosmos.radicant.infrastructure.repository.memory.FundRepositoryTestInterpreter
 import dev.telekosmos.radicant.infrastructure.repository.pg.{Database, FundRepositoryPgInterpreter}
 import io.circe.Json
 import io.circe.generic.auto._
@@ -20,11 +19,17 @@ import org.http4s.implicits.http4sLiteralsSyntax
 class IntegrationSpec extends AnyWordSpec with Matchers {
 
   "Server with database" should {
-    "Get the result from database" in {
-      val test = Database.createTransactor[IO]().use { xa =>
-        val repo = FundRepositoryPgInterpreter[IO](xa)
+    "get the result straight from database" in {
+      val resources = for {
+        config <- Config.loadResource[IO]()
+        xa <- Database.createTransactor[IO](config.storage)
+      } yield (config, xa)
+
+      val test = resources.use { resources =>
+        val (config, xa) = resources
+        val repo = FundRepositoryPgInterpreter[IO](config.storage.radicant, xa)
         val service = FundService(repo)
-        val httpApp = Endpoints.routes(service).orNotFound
+        val httpApp = Endpoints.routes(config.endpoints, service).orNotFound
 
         val fundSize = 1685480652
         val sector = "communication"
@@ -32,7 +37,6 @@ class IntegrationSpec extends AnyWordSpec with Matchers {
         val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("sector", sector)
 
         val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
-        // val expectedJson = Json.arr(Json.obj("fundSymbol" := "GNR", "size" := Json.Null, "fundShortName":= "Invesco Greater China Fund Cl Y"))
 
         val client: Client[IO] = Client.fromHttpApp(httpApp)
         client.expect[Json](request)

@@ -16,11 +16,12 @@ import org.scalatest.wordspec.AnyWordSpec
 
 class EndpointsSpec extends AnyWordSpec with Matchers {
 
+  val config: EndpointsConfig = EndpointsConfig(FundsEndpointConfig(Map("financial" -> "fund_sector_financial_services")))
   val fundService: FundService[IO] = FundService(FundRepositoryTestInterpreter[IO]())
 
-  "Http server" should {
+  "Endpoints should" should {
     "return status" in {
-      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uri"/status")
       val expectedPayload = Json.obj("status" := "Normal")
 
@@ -34,9 +35,9 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       val sector = "financial"
       val uri = uri"/funds"
       val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("sector", sector)
-      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
-      val expectedJson = Json.arr(Json.obj("fundSymbol" := "GNR", "size" := Json.Null, "fundShortName":= "Invesco Greater China Fund Cl Y"))
+      val expectedJson = Json.arr(Json.obj("fundSymbol" := "GNR", "size" := Json.Null, "fundShortName" := "Invesco Greater China Fund Cl Y"))
 
       val client: Client[IO] = Client.fromHttpApp(httpApp)
       val response = client.expect[Json](request)
@@ -49,7 +50,7 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       val sector = "financial"
       val uri = uri"/funds"
       val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("sector", sector)
-      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
 
       val resp = httpApp.run(request).unsafeRunSync()
@@ -58,8 +59,22 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       body should (include("Wrong") and include("size"))
     }
 
+    "request wrong param value" in {
+      val fundSize = "10"
+      val sector = "sports"
+      val uri = uri"/funds"
+      val uriWithQueryParams = uri.withQueryParam("size", fundSize).withQueryParam("sector", sector)
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
+      val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
+
+      val resp = httpApp.run(request).unsafeRunSync()
+      resp.status == Status.BadRequest should be(true)
+      val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+      body should (include("Wrong") and include("sector"))
+    }
+
     "request with no params" in {
-      val httpApp: HttpApp[IO] = Endpoints.routes[IO](fundService).orNotFound
+      val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uri"/funds")
 
       val resp = httpApp.run(request).unsafeRunSync()
