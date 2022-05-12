@@ -1,7 +1,7 @@
 package dev.telekosmos.radicant
 
 import cats.effect._
-import cats.effect.unsafe.implicits.global
+import cats.effect.testing.scalatest.AsyncIOSpec
 import dev.telekosmos.radicant.domain.funds.FundService
 import dev.telekosmos.radicant.infrastructure.api.Endpoints
 import dev.telekosmos.radicant.infrastructure.repository.memory.FundRepositoryTestInterpreter
@@ -13,13 +13,15 @@ import org.http4s.implicits.http4sLiteralsSyntax
 import org.http4s.{HttpApp, Method, Request, Status}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.freespec.AsyncFreeSpec
 
-class EndpointsSpec extends AnyWordSpec with Matchers {
+
+class EndpointsSpec extends AsyncFreeSpec with Matchers with AsyncIOSpec {
 
   val config: EndpointsConfig = EndpointsConfig(FundsEndpointConfig(Map("financial" -> "fund_sector_financial_services")))
   val fundService: FundService[IO] = FundService(FundRepositoryTestInterpreter[IO]())
 
-  "Endpoints should" should {
+  "Endpoints should" - {
     "return status" in {
       val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uri"/status")
@@ -27,7 +29,7 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
 
       val client: Client[IO] = Client.fromHttpApp(httpApp)
       val response = client.expect[Json](request)
-      response.unsafeRunSync() should equal(expectedPayload)
+      response.asserting(_ should equal(expectedPayload))
     }
 
     "return single result" in {
@@ -41,8 +43,7 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
 
       val client: Client[IO] = Client.fromHttpApp(httpApp)
       val response = client.expect[Json](request)
-      val result = response.unsafeRunSync()
-      result should equal(expectedJson)
+      response.asserting(_ should equal(expectedJson))
     }
 
     "request wrong param type" in {
@@ -53,11 +54,16 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
 
-      val resp = httpApp.run(request).unsafeRunSync()
-      val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+      val test = for {
+        resp <- httpApp.run(request)
+        bodyList <- resp.body.compile.toList
+        body = bodyList.map(_.toChar).mkString("")
+      } yield (resp.status, body)
 
-      resp.status == Status.BadRequest should be(true)
-      body should (include("Wrong") and include("size"))
+      test.asserting(result => {
+        result._1 == Status.BadRequest should be(true)
+        result._2 should (include("Wrong") and include("size"))
+      })
     }
 
     "request wrong param value" in {
@@ -68,22 +74,33 @@ class EndpointsSpec extends AnyWordSpec with Matchers {
       val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uriWithQueryParams)
 
-      val resp = httpApp.run(request).unsafeRunSync()
-      val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+      val test = for {
+        resp <- httpApp.run(request)
+        bodyList <- resp.body.compile.toList
+        body = bodyList.map(_.toChar).mkString("")
+      } yield (resp.status, body)
 
-      resp.status == Status.BadRequest should be(true)
-      body should (include("Wrong") and include("sector"))
+      test.asserting(result => {
+        result._1 == Status.BadRequest should be(true)
+        result._2 should (include("Wrong") and include("sector"))
+      })
     }
 
     "request with no params" in {
       val httpApp: HttpApp[IO] = Endpoints.routes[IO](config, fundService).orNotFound
       val request: Request[IO] = Request(method = Method.GET, uri = uri"/funds")
 
-      val resp = httpApp.run(request).unsafeRunSync()
-      val body = resp.body.compile.toList.unsafeRunSync().map(_.toChar).mkString("")
+      val test = for {
+        resp <- httpApp.run(request)
+        bodyList <- resp.body.compile.toList
+        body = bodyList.map(_.toChar).mkString("")
+      } yield (resp.status, body)
 
-      resp.status == Status.BadRequest should be(true)
-      body should (include("required") and include("size"))
+      test.asserting(result => {
+        result._1 == Status.BadRequest should be(true)
+        result._2 should (include("required") and include("size"))
+      })
     }
+
   }
 }

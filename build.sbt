@@ -34,6 +34,7 @@ lazy val root = (project in file(".")).settings(
 
     "org.scalamock" %% "scalamock" % "5.2.0" % Test,
     "org.scalatest" %% "scalatest" % "3.2.9" % Test,
+    "org.typelevel" %% "cats-effect-testing-scalatest" % "1.4.0" % Test,
 
     // better monadic for compiler plugin as suggested by documentation
     compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
