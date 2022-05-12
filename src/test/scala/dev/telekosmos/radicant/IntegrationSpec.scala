@@ -44,7 +44,6 @@ class IntegrationSpec extends AsyncFreeSpec with Matchers with AsyncIOSpec {
         client.expect[Json](request)
       }
 
-      // val result = test.unsafeRunSync()
       test.asserting(result => {
         val listResults = result.as[List[Fund]]
         val expectedSymbols = List("FNGU", "HYS", "XLC")
@@ -82,7 +81,6 @@ class IntegrationSpec extends AsyncFreeSpec with Matchers with AsyncIOSpec {
         client.expect[Json](request)
       }
 
-      // val result = test.unsafeRunSync()
       test.asserting(result => {
         val listResults = result.as[List[Fund]]
         for {
@@ -94,5 +92,4 @@ class IntegrationSpec extends AsyncFreeSpec with Matchers with AsyncIOSpec {
       })
     }
   }
-  // val fundService: FundService[IO] = FundService(FundRepositoryTestInterpreter[IO]())
 }

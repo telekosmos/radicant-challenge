@@ -43,8 +43,6 @@ class EndpointsSpec extends AsyncFreeSpec with Matchers with AsyncIOSpec {
 
       val client: Client[IO] = Client.fromHttpApp(httpApp)
       val response = client.expect[Json](request)
-      // val result = response.unsafeRunSync()
-      // result should equal(expectedJson)
       response.asserting(_ should equal(expectedJson))
     }
 

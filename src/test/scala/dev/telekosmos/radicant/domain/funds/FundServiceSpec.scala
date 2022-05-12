@@ -25,18 +25,10 @@ class FundServiceSpec extends AsyncFreeSpec with Matchers with AsyncIOSpec {
         val fund = resp(0)
         fund.fundSymbol should equal("AAUD")
       })
-      /*
-      val result = call.unsafeRunSync()
-
-      result.size shouldBe(1)
-      val fund = result(0)
-      fund.fundSymbol should equal("AAUD")
-       */
     }
 
     "return multiple fund results" in {
       val call: IO[List[Fund]] = fundService.findBySizeAndSector(0, "fund_sector_financial_services")
-      // val result = call.unsafeRunSync()
 
       call.asserting(result => {
         result.size shouldBe(2)
